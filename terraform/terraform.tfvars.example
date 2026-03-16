@@ -1,0 +1,23 @@
+# ============================================================
+# Terraform Variable Values — Template
+# ============================================================
+# INSTRUCTIONS:
+#   1. Copy this file:  cp terraform.tfvars.example terraform.tfvars
+#   2. Fill in your real values in terraform.tfvars
+#   3. NEVER commit terraform.tfvars — it is in .gitignore
+# ============================================================
+
+project_id = "your-actual-gcp-project-id"
+region     = "europe-west3"
+environment = "prod"
+
+# GCS bucket names — must be globally unique across ALL of GCP
+# Convention: use your project ID as a suffix to guarantee uniqueness
+gcs_bucket_raw       = "citybikes-raw-your-project-id"
+gcs_bucket_processed = "citybikes-processed-your-project-id"
+gcs_bucket_snapshots = "citybikes-snapshots-your-project-id"
+
+# BigQuery dataset names — only unique within your project
+bq_dataset_raw     = "citybikes_raw"
+bq_dataset_staging = "citybikes_staging"
+bq_dataset_mart    = "citybikes_mart"

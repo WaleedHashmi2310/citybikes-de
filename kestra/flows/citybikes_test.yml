@@ -1,0 +1,25 @@
+# ============================================================
+# Test flow — confirms Kestra is running and can read env vars
+# Delete this file once Phase 1 flows are written
+# ============================================================
+id: citybikes_test
+namespace: citybikes.dev
+
+description: |
+  Smoke test flow. Runs a simple task to confirm Kestra
+  is working and environment variables are reachable.
+
+tasks:
+  - id: print_config
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Kestra is running.
+      GCP Project: {{ envs.GCP_PROJECT_ID }}
+      GCS Raw bucket: {{ envs.GCS_BUCKET_RAW }}
+      Networks: {{ envs.CITYBIKES_NETWORKS }}
+      Storage backend: {{ envs.STORAGE_BACKEND }}
+
+triggers:
+  - id: manual_only
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: disabled

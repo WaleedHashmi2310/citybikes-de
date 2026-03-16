@@ -1,0 +1,21 @@
+kestra:
+  # Use PostgreSQL as the backend for both the repository
+  # (stores flow definitions) and the queue (task execution messages)
+  repository:
+    type: postgres
+  queue:
+    type: postgres
+
+  # Local filesystem storage for flow files and execution outputs
+  # In production this switches to GCS
+  storage:
+    type: local
+    local:
+      base-path: /app/storage
+
+datasources:
+  postgres:
+    url: jdbc:postgresql://postgres:5432/${KESTRA_DB_NAME:-kestra}
+    driverClassName: org.postgresql.Driver
+    username: ${KESTRA_DB_USER:-kestra}
+    password: ${KESTRA_DB_PASSWORD:-kestra_local_password}

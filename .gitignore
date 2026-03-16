@@ -1,0 +1,82 @@
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments — never commit these
+.venv/
+venv/
+env/
+ENV/
+
+# ============================================================
+# Secrets and credentials — THE MOST IMPORTANT SECTION
+# If any of these appear in git status, stop immediately
+# ============================================================
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+service-account*.json
+*-credentials.json
+gcp-*.json
+application_default_credentials.json
+*-key.json
+
+# ============================================================
+# Terraform
+# ============================================================
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+!terraform.tfvars.example
+
+# ============================================================
+# dbt
+# ============================================================
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+dbt/profiles.yml
+!dbt/profiles.yml.example
+
+# ============================================================
+# Data files — large files stay out of Git
+# ============================================================
+*.parquet
+*.csv
+!dbt/seeds/*.csv
+!data/snapshots/.gitkeep
+
+# ============================================================
+# Editors and OS
+# ============================================================
+.vscode/settings.json
+.idea/
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ============================================================
+# Kestra
+# ============================================================
+kestra/.kestra/

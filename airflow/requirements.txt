@@ -1,0 +1,7 @@
+# Astro Runtime includes core providers — add only what's missing
+
+# GCP providers for Cloud Run, BigQuery, GCS
+apache-airflow-providers-google==10.22.0
+
+# For dbt operators (Phase 3)
+astronomer-cosmos==1.7.0

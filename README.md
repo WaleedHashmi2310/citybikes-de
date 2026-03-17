@@ -2,7 +2,7 @@
 
 > End-to-end data engineering project for the
 > [DataTalks Data Engineering Zoomcamp](https://github.com/DataTalksClub/data-engineering-zoomcamp).
-> Ingests real-time bikeshare station data from 6 European cities,
+> Ingests real-time bikeshare station data from 4 European cities,
 > transforms it in BigQuery using dbt, and visualises commute patterns
 > and occupancy trends in Looker Studio.
 
@@ -16,7 +16,7 @@
 
 | Layer | Technology |
 |---|---|
-| Orchestration | Kestra |
+| Orchestration | Apache Airflow on Astronomer Astro |
 | Ingestion | Python · Pydantic · Cloud Run Jobs |
 | Historical load | PySpark · Dataproc Serverless |
 | Data lake | Google Cloud Storage |
@@ -25,26 +25,31 @@
 | Infrastructure as Code | Terraform |
 | CI/CD | GitHub Actions |
 | Visualisation | Looker Studio · Power BI |
-| Local development | Docker Compose · DuckDB |
+| Local development | Astro CLI · DuckDB |
 
 ## Cities covered
 
 | City | Network ID | Stations |
 |---|---|---|
-| Paris, France | velib | ~1,400 |
-| Barcelona, Spain | bicing | ~530 |
-| London, UK | tfl-cycle-hire | ~800 |
-| Berlin, Germany | nextbike-de | ~200 |
-| Koblenz, Germany | nextbike-de | ~50 |
+| Paris, France | velib | ~1,509 |
+| Barcelona, Spain | bicing | ~544 |
+| London, UK | santander-cycles | ~800 |
+| Berlin, Germany | nextbike-berlin | ~2,080 |
 
 ## Quick start
 
-### Run locally (no GCP required)
+### Run ingestion locally (no GCP required)
 ```bash
-git clone https://github.com/YOUR_USERNAME/citybikes-de.git
+git clone https://github.com/WaleedHashmi2310/citybikes-de.git
 cd citybikes-de
-cp .env.example .env        # edit with your values
-docker compose up           # starts Kestra + PostgreSQL locally
+cp .env.example .env
+./run-local.sh ingest-local
+```
+
+### Run Airflow locally
+```bash
+./run-local.sh airflow-start
+# Open http://localhost:8080
 ```
 
 ### Deploy to GCP
@@ -52,14 +57,13 @@ docker compose up           # starts Kestra + PostgreSQL locally
 cd terraform
 cp terraform.tfvars.example terraform.tfvars  # edit with your values
 terraform init
-terraform plan
 terraform apply
 ```
 
 ## Project status
 
 - [x] Phase 0 — Repository setup and configuration
-- [ ] Phase 1 — Ingestion layer (Pydantic · Cloud Run · Kestra)
+- [x] Phase 1 — Ingestion layer (Pydantic · Cloud Run · Airflow)
 - [ ] Phase 2 — PySpark historical bulk load
 - [ ] Phase 3 — dbt warehouse (staging · dims · facts)
 - [ ] Phase 4 — Looker Studio and Power BI dashboards
@@ -69,8 +73,8 @@ terraform apply
 ```
 citybikes-de/
 ├── terraform/        Infrastructure as Code (GCP resources)
-├── docker/           Docker Compose for local development
-├── kestra/flows/     Orchestration flow definitions
+├── docker/           Docker files for ingestion container
+├── airflow/          Airflow DAGs and Astro project
 ├── ingestion/        Python ingestion package
 ├── spark/            PySpark historical bulk load script
 ├── dbt/              Data transformation models and tests

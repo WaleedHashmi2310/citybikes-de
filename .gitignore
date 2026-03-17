@@ -76,7 +76,11 @@ Thumbs.db
 *.swp
 *.swo
 
+
 # ============================================================
-# Kestra
+# Airflow / Astro
 # ============================================================
-kestra/.kestra/
+airflow/logs/
+airflow/.astro/
+airflow/__pycache__/
+airflow/.env

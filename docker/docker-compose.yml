@@ -1,72 +1,29 @@
+# ============================================================
+# CityBikes DE — Local Development Stack
+# ============================================================
+# This compose file is for testing the ingestion container locally.
+#
+# For Airflow local development, use Astro CLI instead:
+#   cd airflow && astro dev start
+#
+# Usage:
+#   Test ingestion locally:
+#   docker compose -f docker/docker-compose.yml run --rm ingestion
+# ============================================================
+
 services:
 
-  postgres:
-    image: postgres:16-alpine
-    container_name: citybikes-postgres
+  ingestion:
+    build:
+      context: .
+      dockerfile: docker/ingestion/Dockerfile
+    container_name: citybikes-ingestion-local
     environment:
-      POSTGRES_USER: ${KESTRA_DB_USER:-kestra}
-      POSTGRES_PASSWORD: ${KESTRA_DB_PASSWORD:-kestra_local_password}
-      POSTGRES_DB: ${KESTRA_DB_NAME:-kestra}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${KESTRA_DB_USER:-kestra}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  kestra:
-    image: kestra/kestra:latest
-    container_name: citybikes-kestra
-    pull_policy: always
-    user: "root"
-
-    # Pass the config file path to Kestra on startup
-    command: server standalone --config /app/config/application.yml
-
-    environment:
-      KESTRA_DB_USER: "${KESTRA_DB_USER:-kestra}"
-      KESTRA_DB_PASSWORD: "${KESTRA_DB_PASSWORD:-kestra_local_password}"
-      KESTRA_DB_NAME: "${KESTRA_DB_NAME:-kestra}"
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      LOCAL_STORAGE_PATH: ${LOCAL_STORAGE_PATH:-/tmp/citybikes}
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID}
+      GCS_BUCKET_RAW: ${GCS_BUCKET_RAW}
       GOOGLE_APPLICATION_CREDENTIALS: /gcp-key/credentials.json
-      GCP_PROJECT_ID: "${GCP_PROJECT_ID}"
-      GCP_REGION: "${GCP_REGION}"
-      GCS_BUCKET_RAW: "${GCS_BUCKET_RAW}"
-      GCS_BUCKET_PROCESSED: "${GCS_BUCKET_PROCESSED}"
-      BQ_DATASET_RAW: "${BQ_DATASET_RAW}"
-      BQ_DATASET_STAGING: "${BQ_DATASET_STAGING}"
-      BQ_DATASET_MART: "${BQ_DATASET_MART}"
-      CITYBIKES_NETWORKS: "${CITYBIKES_NETWORKS}"
-      STORAGE_BACKEND: "${STORAGE_BACKEND:-local}"
-
     volumes:
-      # Kestra configuration file
-      - ../kestra/config/application.yml:/app/config/application.yml:ro
-
-      # GCP credentials
       - ${GOOGLE_APPLICATION_CREDENTIALS}:/gcp-key/credentials.json:ro
-
-      # Flow YAML files — hot-reloaded
-      - ../kestra/flows:/app/flows:ro
-
-      # Persistent storage
-      - kestra_storage:/app/storage
-
-    ports:
-      - "8080:8080"
-      - "8081:8081"
-
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
-    driver: local
-  kestra_storage:
-    driver: local
+      - /tmp/citybikes:/tmp/citybikes

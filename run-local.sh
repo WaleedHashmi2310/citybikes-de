@@ -1,16 +1,17 @@
 #!/bin/bash
 # ============================================================
-# Convenience script for local development
+# CityBikes DE — Local Development Convenience Script
+# ============================================================
 # Usage:
-#   ./run-local.sh up      — start Kestra + PostgreSQL
-#   ./run-local.sh down    — stop all containers
-#   ./run-local.sh logs    — tail Kestra logs
-#   ./run-local.sh status  — show running containers
+#   ./run-local.sh airflow-start   — start local Airflow via Astro
+#   ./run-local.sh airflow-stop    — stop local Airflow
+#   ./run-local.sh airflow-logs    — tail Airflow logs
+#   ./run-local.sh ingest-local    — run ingestion locally to disk
+#   ./run-local.sh ingest-gcs      — run ingestion against real GCS
 # ============================================================
 
 set -e
 
-COMPOSE_FILE="docker/docker-compose.yml"
 ENV_FILE=".env"
 
 if [ ! -f "$ENV_FILE" ]; then
@@ -19,30 +20,35 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+# Load env vars
+set -a && source $ENV_FILE && set +a
+
 case "$1" in
-  up)
-    echo "Starting CityBikes local stack..."
-    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE up -d
-    echo ""
-    echo "Kestra UI: http://localhost:8080"
-    echo "Logs: ./run-local.sh logs"
+  airflow-start)
+    echo "Starting local Airflow via Astro..."
+    cd airflow && astro dev start
     ;;
-  down)
-    echo "Stopping CityBikes local stack..."
-    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE down
+  airflow-stop)
+    echo "Stopping local Airflow..."
+    cd airflow && astro dev stop
     ;;
-  logs)
-    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE logs -f kestra
+  airflow-logs)
+    cd airflow && astro dev logs
     ;;
-  status)
-    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE ps
+  ingest-local)
+    echo "Running ingestion locally (writing to /tmp/citybikes)..."
+    cd ingestion
+    source .venv/bin/activate
+    STORAGE_BACKEND=local LOCAL_STORAGE_PATH=/tmp/citybikes python main.py
     ;;
-  restart)
-    echo "Restarting Kestra..."
-    docker compose --env-file $ENV_FILE -f $COMPOSE_FILE restart kestra
+  ingest-gcs)
+    echo "Running ingestion against real GCS..."
+    cd ingestion
+    source .venv/bin/activate
+    STORAGE_BACKEND=gcs python main.py
     ;;
   *)
-    echo "Usage: ./run-local.sh [up|down|logs|status|restart]"
+    echo "Usage: ./run-local.sh [airflow-start|airflow-stop|airflow-logs|ingest-local|ingest-gcs]"
     exit 1
     ;;
 esac

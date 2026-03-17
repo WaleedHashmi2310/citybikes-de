@@ -13,10 +13,10 @@ networks:
     city: Barcelona
     country: Spain
 
-  - id: tfl-cycle-hire
+  - id: santander-cycles
     city: London
     country: United Kingdom
 
-  - id: nextbike-de
-    city: Multiple (Germany)
+  - id: nextbike-berlin
+    city: Berlin
     country: Germany

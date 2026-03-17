@@ -10,10 +10,10 @@ class StationExtra(BaseModel):
     different fields — Velib has altitude, Nextbike does not.
     """
 
-    uid: str | None = None
+    uid: str | int | None = None
     renting: int | None = None
     returning: int | None = None
-    last_updated: int | None = None
+    last_updated: int | str | None = None  # int (Unix) or ISO string
     has_ebikes: bool | None = None
     ebikes: int | None = None
     normal_bikes: int | None = None
@@ -22,8 +22,6 @@ class StationExtra(BaseModel):
     altitude: float | None = None
 
     model_config = {"extra": "allow"}
-    # extra="allow" means unknown fields are accepted and stored
-    # This is important — operators add new fields without warning
 
 
 class StationSnapshot(BaseModel):
@@ -32,7 +30,6 @@ class StationSnapshot(BaseModel):
     This becomes one row in fact_station_snapshot.
     """
 
-    # --- Fields from the API ---
     id: str
     name: str
     latitude: float
@@ -42,11 +39,9 @@ class StationSnapshot(BaseModel):
     empty_slots: int | None = None
     extra: StationExtra = Field(default_factory=StationExtra)
 
-    # --- Fields we add at ingestion time ---
     network_id: str = ""
     ingested_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    # --- Derived fields computed from raw values ---
     capacity: int | None = None
     occupancy_rate: float | None = None
     ebike_share: float | None = None
@@ -54,6 +49,15 @@ class StationSnapshot(BaseModel):
     is_full: bool = False
     is_offline: bool = False
     data_latency_minutes: float | None = None
+
+    @field_validator("timestamp", mode="before")
+    @classmethod
+    def fix_timestamp(cls, v: object) -> object:
+        # Some operators return "+00:00Z" which is invalid ISO 8601
+        # Strip the trailing Z when a UTC offset is already present
+        if isinstance(v, str) and v.endswith("+00:00Z"):
+            v = v[:-1]
+        return v
 
     @field_validator("free_bikes")
     @classmethod
@@ -78,26 +82,17 @@ class StationSnapshot(BaseModel):
 
     @model_validator(mode="after")
     def compute_derived_fields(self) -> "StationSnapshot":
-        """
-        Compute all derived fields after the raw fields are validated.
-        These are the fields that make the data analytically useful.
-        """
         # --- Capacity ---
-        # Prefer operator-stated capacity, fall back to derived
         if self.extra.slots is not None:
             self.capacity = self.extra.slots
         elif self.empty_slots is not None:
             self.capacity = self.free_bikes + self.empty_slots
-        # If empty_slots is None (dockless station), capacity stays None
 
         # --- Occupancy rate ---
-        # What fraction of capacity is currently occupied by bikes?
-        # None for dockless stations where capacity is unknown
         if self.capacity and self.capacity > 0:
             self.occupancy_rate = round(self.free_bikes / self.capacity, 4)
 
         # --- E-bike share ---
-        # What fraction of available bikes are e-bikes?
         ebikes = self.extra.ebikes or 0
         if self.free_bikes > 0 and ebikes > 0:
             self.ebike_share = round(ebikes / self.free_bikes, 4)
@@ -105,8 +100,6 @@ class StationSnapshot(BaseModel):
         # --- Status flags ---
         self.is_empty = self.free_bikes == 0
         self.is_full = self.empty_slots is not None and self.empty_slots == 0
-        # A station is offline if it has no bikes, no docks,
-        # and is not accepting rentals or returns
         self.is_offline = (
             self.free_bikes == 0
             and self.empty_slots == 0
@@ -115,11 +108,21 @@ class StationSnapshot(BaseModel):
         )
 
         # --- Data latency ---
-        # How old is this reading compared to when we ingested it?
+        # last_updated can be a Unix int or an ISO string depending on operator
         if self.extra.last_updated is not None:
-            source_time = datetime.fromtimestamp(self.extra.last_updated, tz=UTC)
-            delta = self.ingested_at - source_time
-            self.data_latency_minutes = round(delta.total_seconds() / 60, 2)
+            try:
+                if isinstance(self.extra.last_updated, int):
+                    source_time = datetime.fromtimestamp(self.extra.last_updated, tz=UTC)
+                else:
+                    # ISO string — parse it, assume UTC if no timezone
+                    source_time = datetime.fromisoformat(self.extra.last_updated).replace(
+                        tzinfo=UTC
+                    )
+                delta = self.ingested_at - source_time
+                self.data_latency_minutes = round(delta.total_seconds() / 60, 2)
+            except Exception:
+                # If parsing fails, skip latency — don't crash the pipeline
+                pass
 
         return self
 
@@ -127,7 +130,6 @@ class StationSnapshot(BaseModel):
 class NetworkSnapshot(BaseModel):
     """
     All stations for one network from one API poll.
-    This is what the CityBikes API returns for one city.
     """
 
     network_id: str

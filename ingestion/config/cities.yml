@@ -1,0 +1,22 @@
+# CityBikes network IDs to ingest
+# Full list available at: https://api.citybik.es/v2/networks
+#
+# To add a city: find its network ID from the API and add it below
+# To remove a city: comment it out or delete the line
+
+networks:
+  - id: velib
+    city: Paris
+    country: France
+
+  - id: bicing
+    city: Barcelona
+    country: Spain
+
+  - id: tfl-cycle-hire
+    city: London
+    country: United Kingdom
+
+  - id: nextbike-de
+    city: Multiple (Germany)
+    country: Germany

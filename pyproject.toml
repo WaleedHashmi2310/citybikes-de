@@ -1,0 +1,36 @@
+# ============================================================
+# Tool configuration for Python quality checks
+# Used by: ruff (linting), black (formatting), pytest (testing)
+# ============================================================
+
+[tool.ruff]
+# Target Python 3.12
+target-version = "py312"
+line-length = 100
+
+# Folders to check
+include = ["ingestion/**/*.py"]
+
+[tool.ruff.lint]
+# Rule sets to enforce:
+# E/W = pycodestyle errors and warnings
+# F   = pyflakes (unused imports, undefined names)
+# I   = isort (import ordering)
+# UP  = pyupgrade (modern Python syntax)
+select = ["E", "W", "F", "I", "UP"]
+
+# Rules to ignore:
+# E501 = line too long (black handles this)
+ignore = ["E501"]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+include = "ingestion/.*\\.py$"
+
+[tool.pytest.ini_options]
+testpaths = ["ingestion/tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+# Show extra info on failures
+addopts = "-v --tb=short"

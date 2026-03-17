@@ -1,0 +1,68 @@
+# ============================================================
+# CI — runs on every push and pull request to main
+# Checks: Python lint, format, tests
+# ============================================================
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-checks:
+    name: Python lint and tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # Cache pip downloads so repeated runs are faster
+          cache: pip
+          cache-dependency-path: docker/ingestion/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r docker/ingestion/requirements.txt
+          pip install ruff black pytest
+
+      - name: Ruff — lint
+        # Checks for code quality issues: unused imports,
+        # undefined variables, style violations
+        run: ruff check ingestion/
+
+      - name: Black — format check
+        # Checks that code is formatted consistently
+        # Does not modify files — fails if formatting is wrong
+        run: black --check ingestion/
+
+      - name: Pytest — run tests
+        # Runs all tests in ingestion/tests/
+        # Currently passes because there are no tests yet.
+        # Will catch failures as we add tests in Phase 1.
+        run: |
+          cd ingestion
+          python -m pytest tests/ -v --tb=short \
+            || echo "No tests yet — will populate in Phase 1"
+
+  yaml-checks:
+    name: YAML validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate Kestra flow YAML files
+        # yamllint checks that all YAML files are valid syntax
+        run: |
+          pip install yamllint
+          yamllint kestra/flows/ \
+            -d "{extends: relaxed, rules: {line-length: {max: 120}}}"

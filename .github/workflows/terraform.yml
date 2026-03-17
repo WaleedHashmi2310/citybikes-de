@@ -1,0 +1,80 @@
+# ============================================================
+# Terraform CI/CD
+#
+# On pull request → terraform plan (preview only, no changes)
+# On merge to main → terraform apply (real infrastructure changes)
+#
+# This means all infrastructure changes go through code review
+# before being applied — exactly like application code.
+# ============================================================
+name: Terraform
+
+on:
+  push:
+    branches: [main]
+    paths:
+      # Only runs when terraform files actually change
+      # No point running terraform on a README edit
+      - "terraform/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+
+env:
+  TF_VERSION: "1.7.0"
+  WORKING_DIR: terraform
+
+jobs:
+  terraform:
+    name: Terraform ${{ github.event_name == 'push' && 'Apply' || 'Plan' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ env.WORKING_DIR }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Terraform ${{ env.TF_VERSION }}
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.GCP_PROJECT_ID }}-terraform-state" \
+            -backend-config="prefix=terraform/state"
+
+      - name: Terraform Format Check
+        # Fails if any .tf file isn't properly formatted
+        # Fix locally with: terraform fmt
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        # Validates the configuration is internally consistent
+        # Catches typos in resource names, missing required fields, etc.
+        run: terraform validate
+
+      - name: Terraform Plan
+        # On pull requests: shows what WOULD change without applying
+        # The output appears as a comment on the PR
+        if: github.event_name == 'pull_request'
+        run: terraform plan -no-color
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Terraform Apply
+        # On merge to main: applies the changes for real
+        # Only runs on push to main (not on PRs)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve
+        env:
+          TF_VAR_project_id: ${{ secrets.GCP_PROJECT_ID }}

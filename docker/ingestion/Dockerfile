@@ -2,11 +2,8 @@
 # CityBikes DE — Ingestion Container
 # ============================================================
 # Multi-stage build:
-#   Stage 1 (builder): installs dependencies
-#   Stage 2 (runtime): lean image with only what's needed to run
-#
-# This keeps the final image small and avoids shipping build
-# tools into production.
+#   Stage 1 (builder): installs dependencies using uv
+#   Stage 2 (runtime): lean image with only what's needed
 # ============================================================
 
 # --- Stage 1: builder ---
@@ -14,33 +11,39 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /build
 
-# Copy only the requirements file first.
-# Docker caches layers — if requirements.txt hasn't changed,
-# this expensive pip install step is skipped on rebuild.
-COPY requirements.txt .
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-RUN pip install --upgrade pip \
-    && pip install --no-cache-dir --target=/build/packages -r requirements.txt
+# Copy dependency files first
+# Docker caches this layer — if pyproject.toml and uv.lock
+# haven't changed, the expensive install step is skipped
+COPY ingestion/pyproject.toml ingestion/uv.lock ./
+
+# Install dependencies into /build/.venv
+# --frozen: use exact versions from uv.lock, never update
+# --no-dev: skip dev dependencies (pytest, ruff, black)
+RUN uv sync --frozen --no-dev
 
 # --- Stage 2: runtime ---
 FROM python:3.12-slim AS runtime
 
-# Never run containers as root — security best practice
+# Never run containers as root
 RUN useradd --create-home --shell /bin/bash appuser
 
 WORKDIR /app
 
-# Copy installed packages from builder stage
-COPY --from=builder /build/packages /usr/local/lib/python3.12/site-packages/
+# Copy the venv from builder
+COPY --from=builder /build/.venv /app/.venv
 
-# Copy the application source code
-COPY src/ ./src/
-COPY config/ ./config/
-COPY main.py .
+# Copy application code
+COPY ingestion/src/ ./src/
+COPY ingestion/config/ ./config/
+COPY ingestion/main.py .
+
+# Add venv to PATH so python and all tools resolve correctly
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Switch to non-root user
 USER appuser
 
-# This is the command Docker runs when the container starts.
-# Cloud Run Jobs execute this and then exit.
 CMD ["python", "main.py"]

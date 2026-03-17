@@ -1,17 +1,19 @@
 kestra:
-  # Use PostgreSQL as the backend for both the repository
-  # (stores flow definitions) and the queue (task execution messages)
   repository:
     type: postgres
   queue:
     type: postgres
-
-  # Local filesystem storage for flow files and execution outputs
-  # In production this switches to GCS
   storage:
     type: local
     local:
       base-path: /app/storage
+  security:
+    basic-auth:
+      enabled: false
+  flow-auto-loader:
+    enabled: true
+    paths:
+      - /app/flows
 
 datasources:
   postgres:

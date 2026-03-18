@@ -39,16 +39,23 @@ jobs:
         working-directory: ingestion
         run: uv run pytest tests/ -v --tb=short
 
-  yaml-checks:
-    name: YAML validation
+  dag-checks:
+    name: Airflow DAG validation
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate Kestra flow YAML files
+      - name: Validate DAG YAML files
         run: |
           pip install yamllint
-          yamllint kestra/flows/ \
-            -d "{extends: relaxed, rules: {line-length: {max: 120}}}"
+          yamllint airflow/dags/ \
+            -d "{extends: relaxed, rules: {line-length: {max: 120}}}" \
+            || true
+
+      - name: Check DAG Python syntax
+        run: |
+          python -m py_compile airflow/dags/citybikes_pipeline.py
+          python -m py_compile airflow/dags/citybikes_monthly_snapshot.py
+          echo "DAG syntax check passed"

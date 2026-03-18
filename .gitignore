@@ -84,3 +84,8 @@ airflow/logs/
 airflow/.astro/
 airflow/__pycache__/
 airflow/.env
+
+# ============================================================
+# Agents
+# ============================================================
+docs/agent_context.md
